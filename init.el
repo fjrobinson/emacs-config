@@ -333,7 +333,7 @@
   (eval-after-load 'irony '(add-to-list 'company-backends '(company-irony company-irony-c-headers company-yasnippet)))
 
   (company-quickhelp-mode 1)
-  (setq company-quickhelp-idle-delay 0.5)
+  ;;(setq company-quickhelp-idle-delay 0.5)
   (global-company-mode))
 
 (defun enable-projectile ()
