@@ -25,7 +25,8 @@
     ("020bec1abae2397c86dc6c1f58bdc72d0b0ecf71082f315a4396c099d2a19cae" "4065089f1c0f8d2847e5b6b4bea69c720e7489528af6f3f1ed69b515a7a3afe2" "0af7ad91975cd12ef3d9fd5288df5629e004a83af344188c549be2e4553ee7ca" "624356345cab0c89cddca5acd5cdbcb5a7e948752bea30496100530169d8c39e" "bcc6775934c9adf5f3bd1f428326ce0dcd34d743a92df48c128e6438b815b44f" "a27c00821ccfd5a78b01e4f35dc056706dd9ede09a8b90c6955ae6a390eb1c1e" "c74e83f8aa4c78a121b52146eadb792c9facc5b1f02c917e3dbb454fca931223" "3c83b3676d796422704082049fc38b6966bcad960f896669dfc21a7a37a748fa" "20e359ef1818a838aff271a72f0f689f5551a27704bf1c9469a5c2657b417e6c" default)))
  '(helm-gtags-auto-update t)
  '(helm-gtags-ignore-case t)
- '(helm-gtags-path-style (quote relative)))
+ '(helm-gtags-path-style (quote relative))
+ '(inhibit-startup-screen t))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
@@ -54,8 +55,11 @@
 (package-install 'yasnippet)
 (package-install 'move-text)
 (package-install 'zenburn-theme)
+(package-install 'rainbow-delimiters)
+(package-install 'rainbow-mode)
 
 (package-install 'irony)
+(package-install 'irony-eldoc)
 (package-install 'company)
 (package-install 'company-flx)
 (package-install 'company-irony)
@@ -74,10 +78,10 @@
 (dired-async-mode 1)
 
 ;; Setup the theme
-(load-theme 'zenburn)
+(add-to-list 'custom-theme-load-path "~/.emacs.d/themes/")
+(load-theme 'zenburn 1)
 (set-face-background 'vertical-border "color-234")
 (set-face-foreground 'vertical-border "color-234")
-
 
 ;; Move lines and regions
 (require 'move-text)
@@ -85,12 +89,18 @@
 (global-set-key (kbd "M-n") 'move-text-down)
 (global-set-key (kbd "M-p") 'move-text-up)
 
-
 ;; Set the fill column
 (setq fill-column 80)
 
 ;; Remove menu bar
-(menu-bar-mode -1)
+(if (eq window-system nil)
+    (menu-bar-mode -1)
+  '())
+
+;; save place in files
+(require 'saveplace)
+(setq save-place-file "~/.emacs.d/saved-places")
+(setq-default save-place t)
 
 (defun enable-flx-ido ()
   "Enable flx-ido completion."
@@ -174,7 +184,7 @@
   (global-semanticdb-minor-mode 1)
 
   ;; Displays function prototype in the mini-buffer (like el-doc)
-  (global-semantic-idle-summary-mode 1)
+  ;;(global-semantic-idle-summary-mode 1)
 
   ;; Provides simple completion interface (<TAB> to cycle)
   ;;(global-semantic-idle-completions-mode 1)
@@ -304,11 +314,6 @@
   ;; Enable flx score based searching
   (helm-flx-mode +1))
 
-(eval-after-load 'company
-  '(progn
-     (define-key company-mode-map (kbd "C-c C-x C-z") 'helm-company)
-     (define-key company-active-map (kbd "C-c C-x C-z") 'helm-company)))
-
 (defun enable-flycheck ()
   "Setup Flycheck for use."
 
@@ -324,14 +329,16 @@
   "Setup Company for use."
   (require 'company)
 
-  (with-eval-after-load 'company
-    (company-flx-mode +1))
+  (with-eval-after-load 'company (company-flx-mode +1))
+  (eval-after-load 'irony '(add-to-list 'company-backends '(company-irony company-irony-c-headers company-yasnippet)))
 
-  (global-company-mode)) ; drop down completions interfacing with
-                         ; Semantic. Company is an external plugin.
+  (company-quickhelp-mode 1)
+  (setq company-quickhelp-idle-delay 0.5)
+  (global-company-mode))
 
 (defun enable-projectile ()
   "Setup projectile for project management."
+  (defvar projectile-completion-system)
   (projectile-global-mode)
   (setq projectile-completion-system 'helm)
   (helm-projectile-on))
@@ -344,17 +351,24 @@
              (eldoc-mode nil eldoc)
              (helm-mode nil helm)
              (irony-mode " Fe" irony)
-             (projectile-mode "" projectile)
+             (projectile-mode " Proj" projectile)
              (auto-fill-mode "AF" nil))))
 
 (defun enable-irony ()
   "Setup c-mode functionality."
+  (defvar company-backends)
   (require 'irony)
-  (add-hook 'irony-mode-hook 'irony-eldoc)
+  ;;(add-hook 'irony-mode-hook 'irony-eldoc)
   (irony-mode 1)
+  (irony-eldoc 1)
   (irony-cdb-autosetup-compile-options)
-  (eval-after-load 'flycheck (flycheck-irony-setup))
-  (eval-after-load 'company (add-to-list 'company-backends '(company-irony-c-headers company-irony))))
+  (eval-after-load 'flycheck (flycheck-irony-setup)))
+  ;;(eval-after-load 'company '(add-to-list 'company-backends '('company-irony 'company-irony-c-headers))))
+
+(defun enable-yasnippet ()
+  ;; yasnippet
+  (require 'yasnippet)
+  (yas-global-mode 1))
 
 ;; CALL THE ABOVE DEFINED FUNCTIONS TO SETUP EMACS
 (enable-delight)
@@ -364,13 +378,17 @@
 (enable-indentation-policy)
 (enable-helm)
 (enable-helm-gtags)
-
+(enable-semantic)
+(enable-yasnippet)
 (define-key global-map (kbd "C-c C-f") 'find-grep)
+
+;; Fundemental mode redefine as org-mode.
+(setq-default major-mode 'org-mode)
 
 ;; General programming mode enables
 (add-hook 'prog-mode-hook
           (lambda ()
-            ;;(eldoc-mode)
+            (eldoc-mode)
             (rainbow-delimiters-mode)
             (comment-auto-fill)
             (enable-line-numbers)
@@ -379,16 +397,12 @@
 ;; Emacs-Lisp specific functionality.
 (add-hook 'emacs-lisp-mode-hook
           (lambda ()
-            (eldoc-mode) ; shows arguments of functions in the
-                                        ; mini-buffer.
             ))
 
 ;; C specific functionality c-mode-hook
 (add-hook 'c-mode-hook
           (lambda ()
             (enable-irony)
-            ;;(eldoc-mode)
-            (comment-auto-fill)
             ;; add more commands here
             ))
 
@@ -396,15 +410,12 @@
 (add-hook 'c++-mode-hook
           (lambda ()
             (enable-irony)
-            (comment-auto-fill)
             ;; add more commands here
             ))
-
-(enable-flycheck)
-;;(enable-semantic)
-(enable-projectile)
-(enable-company)
 ;;(enable-flyspell)
+(enable-projectile)
+(enable-flycheck)
+(enable-company)
 
 ;; Give visual indication (1) or disable (2) terminal bell
 ;;(setq visible-bell 1)           ; (1)
@@ -416,10 +427,6 @@
 ;; Remove trailing white space on save
 (add-hook 'before-save-hook 'whitespace-cleanup)
 
-;; yasnippet
-;;(require 'yasnippet)
-;;(yas-global-mode 1)
-;;(company-yasnippet 1)
 
 (message "Buffer Size: %d" (buffer-size))
 
