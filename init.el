@@ -1,4 +1,4 @@
-;;; .emacs --- A basic Emacs initialization script
+;;; init.el --- A basic Emacs initialization script
 ;;
 ;;; Author: Jamie Robinson
 ;;
@@ -26,7 +26,10 @@
  '(helm-gtags-auto-update t)
  '(helm-gtags-ignore-case t)
  '(helm-gtags-path-style (quote relative))
- '(inhibit-startup-screen t))
+ '(inhibit-startup-screen t)
+ '(package-selected-packages
+   (quote
+    (smooth-scrolling smartparens helm-core helm projectile flycheck company irony async zenburn-theme yasnippet smart-mode-line rainbow-mode rainbow-delimiters move-text magit irony-eldoc hlinum helm-projectile helm-gtags helm-flycheck helm-flx helm-company flycheck-irony flx-ido delight company-quickhelp company-irony company-flx))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
@@ -44,10 +47,12 @@
   ;; For important compatibility libraries like cl-lib
   (add-to-list 'package-archives
                '("gnu" . "http://elpa.gnu.org/packages/")))
+
 (package-initialize)
 
 ;; Install primary plugins (if not already)
 (package-install 'async)
+(package-install 'delight)
 (package-install 'hlinum)
 (package-install 'flx-ido)
 (package-install 'smart-mode-line)
@@ -57,12 +62,15 @@
 (package-install 'zenburn-theme)
 (package-install 'rainbow-delimiters)
 (package-install 'rainbow-mode)
+(package-install 'smartparens)
+(package-install 'smooth-scrolling)
 
 (package-install 'irony)
 (package-install 'irony-eldoc)
 (package-install 'company)
 (package-install 'company-flx)
 (package-install 'company-irony)
+(package-install 'company-quickhelp)
 (package-install 'flycheck)
 (package-install 'flycheck-irony)
 (package-install 'projectile)
@@ -73,6 +81,7 @@
 (package-install 'helm-flycheck)
 (package-install 'helm-gtags)
 (package-install 'helm-projectile)
+(package-install 'latex-preview-pane)
 
 ;; async? DO I NEED THIS??? check this later.
 (dired-async-mode 1)
@@ -382,6 +391,19 @@
 (enable-yasnippet)
 (define-key global-map (kbd "C-c C-f") 'find-grep)
 
+(require 'smartparens-config)
+(smartparens-global-mode 1)
+(show-smartparens-global-mode 1)
+
+(require 'smooth-scrolling)
+(smooth-scrolling-mode 1)
+
+(if (eq window-system nil)
+    '()
+    (add-hook 'latex-mode-hook
+              (lambda ()
+                (latex-preview-pane-enable))))
+
 ;; Fundemental mode redefine as org-mode.
 (setq-default major-mode 'org-mode)
 
@@ -427,8 +449,5 @@
 ;; Remove trailing white space on save
 (add-hook 'before-save-hook 'whitespace-cleanup)
 
-
-(message "Buffer Size: %d" (buffer-size))
-
-(provide '.emacs)
-;;; .emacs ends here
+(provide 'init.el)
+;;; init.el ends here
