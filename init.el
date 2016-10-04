@@ -14,28 +14,38 @@
 ;;    expanding to more advanced functionality and plugins.
 ;;
 ;;; Code:
-(custom-set-variables
- ;; custom-set-variables was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(custom-enabled-themes (quote (zenburn)))
- '(custom-safe-themes
-   (quote
-    ("020bec1abae2397c86dc6c1f58bdc72d0b0ecf71082f315a4396c099d2a19cae" "4065089f1c0f8d2847e5b6b4bea69c720e7489528af6f3f1ed69b515a7a3afe2" "0af7ad91975cd12ef3d9fd5288df5629e004a83af344188c549be2e4553ee7ca" "624356345cab0c89cddca5acd5cdbcb5a7e948752bea30496100530169d8c39e" "bcc6775934c9adf5f3bd1f428326ce0dcd34d743a92df48c128e6438b815b44f" "a27c00821ccfd5a78b01e4f35dc056706dd9ede09a8b90c6955ae6a390eb1c1e" "c74e83f8aa4c78a121b52146eadb792c9facc5b1f02c917e3dbb454fca931223" "3c83b3676d796422704082049fc38b6966bcad960f896669dfc21a7a37a748fa" "20e359ef1818a838aff271a72f0f689f5551a27704bf1c9469a5c2657b417e6c" default)))
- '(helm-gtags-auto-update t)
- '(helm-gtags-ignore-case t)
- '(helm-gtags-path-style (quote relative))
- '(inhibit-startup-screen t)
- '(package-selected-packages
-   (quote
-    (smooth-scrolling smartparens helm-core helm projectile flycheck company irony async zenburn-theme yasnippet smart-mode-line rainbow-mode rainbow-delimiters move-text magit irony-eldoc hlinum helm-projectile helm-gtags helm-flycheck helm-flx helm-company flycheck-irony flx-ido delight company-quickhelp company-irony company-flx))))
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
+;; Set global defaults
+(setq-default
+ inhibit-startup-screen t     ; disable startup screen
+ fill-column 80               ; set wrap column
+ initial-scratch-message ""
+ x-select-enable-clipboard t  ; use system clipboard
+ indent-tabs-mode nil         ; substitute tabs with spaces
+ show-trailing-whitespace nil
  )
+
+(setq scroll-conservatively 101) ;; move minimum when cursor exits view, instead
+                                 ;; of recentering
+(setq mouse-wheel-scroll-amount '(1)) ;; mouse scroll moves 1 line at a time,
+                                      ;; instead of 5 lines
+(setq mouse-wheel-progressive-speed nil) ;; on a long mouse scroll keep
+                                         ;; scrolling by 1 line
+(define-key global-map (kbd "RET")
+    'newline-and-indent) ; Automatically indent on RET key pressed
+                         ; NOTE: This is normally bound to C-j
+
+(toggle-frame-maximized) ;; Make the GUI version maximized
+(menu-bar-mode -1)     ;; Remove menu bar
+(tool-bar-mode -1)     ;; Remove tool bar
+(scroll-bar-mode -1)   ;; Remove scroll bar
+
+(savehist-mode 1) ;; Remember commands
+(setq savehist-additional-variables '(kill-ring search-ring regexp-search-ring))
+(setq savehist-file "~/.emacs.d/.hist")
+
+;;
+;; PACKAGES
+;;
 
 ;; Melpa package repository setup
 ;; For more info and options:
@@ -63,7 +73,11 @@
 (package-install 'rainbow-delimiters)
 (package-install 'rainbow-mode)
 (package-install 'smartparens)
-(package-install 'smooth-scrolling)
+(package-install 'session)
+(package-install 'undo-tree)
+(package-install 'elscreen)
+(package-install 'ace-jump-mode)
+(package-install 'multiple-cursors)
 
 (package-install 'irony)
 (package-install 'irony-eldoc)
@@ -81,14 +95,26 @@
 (package-install 'helm-flycheck)
 (package-install 'helm-gtags)
 (package-install 'helm-projectile)
+(package-install 'helm-google)
 (package-install 'latex-preview-pane)
+(package-install 'auctex)
+(package-install 'company-auctex)
+
+;; Load external custom file
+(setq-default custom-file (expand-file-name ".custom.el" user-emacs-directory))
+(when (file-exists-p custom-file)
+  (load custom-file))
 
 ;; async? DO I NEED THIS??? check this later.
 (dired-async-mode 1)
 
+(elscreen-start) ;; enable emacs screens
+
 ;; Setup the theme
+(global-hl-line-mode)
 (add-to-list 'custom-theme-load-path "~/.emacs.d/themes/")
 (load-theme 'zenburn 1)
+(set-face-background 'hl-line "#4f4f4f") ;; Change zenburn hl-line face
 (set-face-background 'vertical-border "color-234")
 (set-face-foreground 'vertical-border "color-234")
 
@@ -98,18 +124,54 @@
 (global-set-key (kbd "M-n") 'move-text-down)
 (global-set-key (kbd "M-p") 'move-text-up)
 
-;; Set the fill column
-(setq fill-column 80)
-
-;; Remove menu bar
-(if (eq window-system nil)
-    (menu-bar-mode -1)
-  '())
-
 ;; save place in files
 (require 'saveplace)
 (setq save-place-file "~/.emacs.d/saved-places")
 (setq-default save-place t)
+
+(defun enable-ace-jump-mode ()
+  "Enable ace jump mode."
+  (require 'ace-jump-mode)
+  (define-key global-map (kbd "C-c SPC") 'ace-jump-mode))
+
+(defun enable-multiple-cursors ()
+  (require 'multiple-cursors)
+
+  (global-set-key (kbd "C-c C-") 'mc/edit-lines)
+  (global-set-key (kbd "C-c C-n") 'mc/mark-next-like-this)
+  (global-set-key (kbd "C-c C-p") 'mc/mark-previous-like-this)
+  (global-set-key (kbd "C-c C-a") 'mc/mark-all-like-this)
+
+  (multiple-cursors-mode 1))
+
+(defun enable-expand-region ()
+  (require 'expand-region)
+  (global-set-key (kbd "C-") 'er/expand-region)
+  )
+
+(defun enable-undo-tree ()
+  "Setup the undo tree package."
+  (require 'undo-tree)
+
+  (defadvice undo-tree-visualize (around undo-tree-split-side-by-side activate)
+    "Split undo-tree side-by-side"
+    (let ((split-height-threshold nil)
+          (split-width-threshold 0))
+      ad-do-it))
+
+  (setq-default undo-tree-auto-save-history t)
+
+  (defun undo-tree-visualizer-update-linum (&rest args)
+    (linum-update undo-tree-visualizer-parent-buffer))
+  (advice-add 'undo-tree-visualize-undo :after #'undo-tree-visualizer-update-linum)
+  (advice-add 'undo-tree-visualize-redo :after #'undo-tree-visualizer-update-linum)
+  (advice-add 'undo-tree-visualize-undo-to-x :after #'undo-tree-visualizer-update-linum)
+  (advice-add 'undo-tree-visualize-redo-to-x :after #'undo-tree-visualizer-update-linum)
+  (advice-add 'undo-tree-visualizer-mouse-set :after #'undo-tree-visualizer-update-linum)
+  (advice-add 'undo-tree-visualizer-set :after #'undo-tree-visualizer-update-linum)
+
+  (global-undo-tree-mode 1)
+  )
 
 (defun enable-flx-ido ()
   "Enable flx-ido completion."
@@ -221,17 +283,16 @@
 
   (defvar helm-gtags-mode-map)
   ;; key bindings
-  (eval-after-load "helm-gtags"
-    '(progn
-       (define-key helm-gtags-mode-map (kbd "M-.") 'helm-gtags-find-tag)
-       (define-key helm-gtags-mode-map (kbd "M-r") 'helm-gtags-find-rtag)
-       (define-key helm-gtags-mode-map (kbd "M-s") 'helm-gtags-find-symbol)
-       (define-key helm-gtags-mode-map (kbd "M-g M-p") 'helm-gtags-parse-file)
-       (define-key helm-gtags-mode-map (kbd "C-c <") 'helm-gtags-previous-history)
-       (define-key helm-gtags-mode-map (kbd "C-c >") 'helm-gtags-next-history)
-       (define-key helm-gtags-mode-map (kbd "M-,") 'helm-gtags-pop-stack)))
+  (with-eval-after-load "helm-gtags"
+    (define-key helm-gtags-mode-map (kbd "M-.") 'helm-gtags-find-tag)
+    (define-key helm-gtags-mode-map (kbd "M-r") 'helm-gtags-find-rtag)
+    (define-key helm-gtags-mode-map (kbd "M-s") 'helm-gtags-find-symbol)
+    (define-key helm-gtags-mode-map (kbd "M-g M-p") 'helm-gtags-parse-file)
+    (define-key helm-gtags-mode-map (kbd "C-c <") 'helm-gtags-previous-history)
+    (define-key helm-gtags-mode-map (kbd "C-c >") 'helm-gtags-next-history)
+    (define-key helm-gtags-mode-map (kbd "M-,") 'helm-gtags-pop-stack))
 
-  (eval-after-load 'helm (helm-gtags-mode 1)))
+  (with-eval-after-load "helm" (helm-gtags-mode 1)))
 
 (defun enable-helm ()
   "Setup helm features."
@@ -249,6 +310,7 @@
   (defvar helm-fuzzy-match)
   (defvar helm-M-x-fuzzy-match)
   (defvar helm-buffers-fuzzy-matching)
+
   (defvar helm-recentf-fuzzy-match)
 
   (setq helm-fuzzy-match            t
@@ -339,11 +401,11 @@
   (require 'company)
 
   (with-eval-after-load 'company (company-flx-mode +1))
-  (eval-after-load 'irony '(add-to-list 'company-backends '(company-irony company-irony-c-headers company-yasnippet)))
+  (with-eval-after-load 'irony '(add-to-list 'company-backends '(company-irony company-irony-c-headers company-yasnippet)))
 
   (company-quickhelp-mode 1)
   ;;(setq company-quickhelp-idle-delay 0.5)
-  (global-company-mode))
+  (add-hook 'after-init-hook 'global-company-mode))
 
 (defun enable-projectile ()
   "Setup projectile for project management."
@@ -381,6 +443,7 @@
 
 ;; CALL THE ABOVE DEFINED FUNCTIONS TO SETUP EMACS
 (enable-delight)
+(enable-undo-tree)
 (enable-smart-mode-line)
 (enable-line-numbers)
 (enable-flx-ido)
@@ -389,20 +452,20 @@
 (enable-helm-gtags)
 (enable-semantic)
 (enable-yasnippet)
+(enable-ace-jump-mode)
+(enable-multiple-cursors)
 (define-key global-map (kbd "C-c C-f") 'find-grep)
+
+;;(require 'session)
+(add-hook 'after-init-hook 'session-initialize)
+(add-to-list 'load-path "~/.emacs.d/elpa/session-20120510.1700")
 
 (require 'smartparens-config)
 (smartparens-global-mode 1)
 (show-smartparens-global-mode 1)
 
-(require 'smooth-scrolling)
-(smooth-scrolling-mode 1)
-
-(if (eq window-system nil)
-    '()
-    (add-hook 'latex-mode-hook
-              (lambda ()
-                (latex-preview-pane-enable))))
+(require 'company-auctex)
+(company-auctex-init)
 
 ;; Fundemental mode redefine as org-mode.
 (setq-default major-mode 'org-mode)
@@ -441,10 +504,10 @@
 
 ;; Give visual indication (1) or disable (2) terminal bell
 ;;(setq visible-bell 1)           ; (1)
-(setq ring-bell-function 'ignore) ; (2)
+(setq-default ring-bell-function 'ignore) ; (2)
 
 ;; Show column number in status bar
-(setq column-number-mode t)
+(setq-default column-number-mode t)
 
 ;; Remove trailing white space on save
 (add-hook 'before-save-hook 'whitespace-cleanup)
