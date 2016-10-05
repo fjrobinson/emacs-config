@@ -22,14 +22,13 @@
  x-select-enable-clipboard t  ; use system clipboard
  indent-tabs-mode nil         ; substitute tabs with spaces
  show-trailing-whitespace nil
- )
-
-(setq scroll-conservatively 101) ;; move minimum when cursor exits view, instead
-                                 ;; of recentering
-(setq mouse-wheel-scroll-amount '(1)) ;; mouse scroll moves 1 line at a time,
-                                      ;; instead of 5 lines
-(setq mouse-wheel-progressive-speed nil) ;; on a long mouse scroll keep
-                                         ;; scrolling by 1 line
+ echo-keystrokes 0.1
+ scroll-conservatively 101 ;; move minimum when cursor exits view, instead of
+                           ;; recentering
+ mouse-wheel-scroll-amount '(1) ;; mouse scroll moves 1 line at a time, instead
+                                ;; of 5 lines
+ mouse-wheel-progressive-speed nil) ;; on a long mouse scroll keep scrolling by
+                                    ;; 1 line
 (define-key global-map (kbd "RET")
     'newline-and-indent) ;; Automatically indent on RET key pressed
                          ;; NOTE: This is normally bound to C-j
@@ -38,9 +37,26 @@
 (menu-bar-mode -1)     ;; Remove menu bar
 (tool-bar-mode -1)     ;; Remove tool bar
 (scroll-bar-mode -1)   ;; Remove scroll bar
+(delete-selection-mode 1)
 
-(setq split-width-threshold 80) ;; Make screen splits prefer side by side over
-                                ;; top bottom
+;; Answering just 'y' or 'n' will do
+(defalias 'yes-or-no-p 'y-or-n-p)
+(setq split-width-threshold 0)    ;; Make screen splits prefer side by side over
+(setq split-height-threshold nil) ;; top bottom
+
+;; Auto refresh buffers
+(global-auto-revert-mode 1)
+
+;; Also auto refresh dired, but be quiet about it
+(setq global-auto-revert-non-file-buffers t)
+(setq auto-revert-verbose nil)
+
+;; UTF-8 please
+(setq locale-coding-system 'utf-8)
+(set-terminal-coding-system 'utf-8)
+(set-keyboard-coding-system 'utf-8)
+(set-selection-coding-system 'utf-8)
+(prefer-coding-system 'utf-8)
 
 (savehist-mode 1) ;; Remember commands
 (setq savehist-additional-variables '(kill-ring search-ring regexp-search-ring))
@@ -111,6 +127,9 @@
 ;; async? DO I NEED THIS??? check this later.
 (dired-async-mode 1)
 
+;; Answering just 'y' or 'n' will do
+(defalias 'yes-or-no-p 'y-or-n-p)
+
 ;; Setup the theme
 (global-hl-line-mode)
 (add-to-list 'custom-theme-load-path "~/.emacs.d/themes/")
@@ -127,8 +146,7 @@
 (defun enable-elscreen ()
   "Enable elscreen."
   (elscreen-start) ;; enable emacs screens
-  (elscreen-set-prefix-key "\C-Z")
-  )
+  (elscreen-set-prefix-key "\C-\M-z"))
 
 (defun enable-ace-jump-mode ()
   "Enable ace jump mode."
@@ -155,13 +173,11 @@
 (defun enable-expand-region ()
   "Enable expand region plugin and bind keys to it."
   (require 'expand-region)
-  (global-set-key (kbd "C-c C-u") 'er/expand-region)
-  )
+  (global-set-key (kbd "C-c C-u") 'er/expand-region))
 
 (defun enable-undo-tree ()
   "Setup the undo tree package."
   (require 'undo-tree)
-
   (setq undo-tree-history-dir (let ((dir (concat user-emacs-directory
                                                  "undo-tree-history/")))
                                 (make-directory dir :parents)
@@ -178,8 +194,7 @@
   (advice-add 'undo-tree-visualizer-mouse-set :after #'undo-tree-visualizer-update-linum)
   (advice-add 'undo-tree-visualizer-set :after #'undo-tree-visualizer-update-linum)
 
-  (global-undo-tree-mode 1)
-  )
+  (global-undo-tree-mode 1))
 
 (defun enable-flx-ido ()
   "Enable flx-ido completion."
@@ -243,8 +258,7 @@
   (define-key global-map (kbd "RET")
     'newline-and-indent) ; Automatically indent on RET key pressed
                          ; NOTE: This is normally bound to C-j
-  (setq-default indent-tabs-mode nil) ; substitute tabs with spaces
-  )
+  (setq-default indent-tabs-mode nil)) ; substitute tabs with spaces
 
 ;; Enable the semantic package.
 ;; For more info and options:
