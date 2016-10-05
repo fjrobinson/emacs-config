@@ -31,13 +31,16 @@
 (setq mouse-wheel-progressive-speed nil) ;; on a long mouse scroll keep
                                          ;; scrolling by 1 line
 (define-key global-map (kbd "RET")
-    'newline-and-indent) ; Automatically indent on RET key pressed
-                         ; NOTE: This is normally bound to C-j
+    'newline-and-indent) ;; Automatically indent on RET key pressed
+                         ;; NOTE: This is normally bound to C-j
 
 (toggle-frame-maximized) ;; Make the GUI version maximized
 (menu-bar-mode -1)     ;; Remove menu bar
 (tool-bar-mode -1)     ;; Remove tool bar
 (scroll-bar-mode -1)   ;; Remove scroll bar
+
+(setq split-width-threshold 80) ;; Make screen splits prefer side by side over
+                                ;; top bottom
 
 (savehist-mode 1) ;; Remember commands
 (setq savehist-additional-variables '(kill-ring search-ring regexp-search-ring))
@@ -68,7 +71,6 @@
 (package-install 'smart-mode-line)
 (package-install 'magit)
 (package-install 'yasnippet)
-(package-install 'move-text)
 (package-install 'zenburn-theme)
 (package-install 'rainbow-delimiters)
 (package-install 'rainbow-mode)
@@ -78,6 +80,7 @@
 (package-install 'elscreen)
 (package-install 'ace-jump-mode)
 (package-install 'multiple-cursors)
+(package-install 'expand-region)
 
 (package-install 'irony)
 (package-install 'irony-eldoc)
@@ -108,8 +111,6 @@
 ;; async? DO I NEED THIS??? check this later.
 (dired-async-mode 1)
 
-(elscreen-start) ;; enable emacs screens
-
 ;; Setup the theme
 (global-hl-line-mode)
 (add-to-list 'custom-theme-load-path "~/.emacs.d/themes/")
@@ -118,47 +119,54 @@
 (set-face-background 'vertical-border "color-234")
 (set-face-foreground 'vertical-border "color-234")
 
-;; Move lines and regions
-(require 'move-text)
-(move-text-default-bindings)
-(global-set-key (kbd "M-n") 'move-text-down)
-(global-set-key (kbd "M-p") 'move-text-up)
-
 ;; save place in files
 (require 'saveplace)
 (setq save-place-file "~/.emacs.d/saved-places")
 (setq-default save-place t)
 
+(defun enable-elscreen ()
+  "Enable elscreen."
+  (elscreen-start) ;; enable emacs screens
+  (elscreen-set-prefix-key "\C-Z")
+  )
+
 (defun enable-ace-jump-mode ()
   "Enable ace jump mode."
   (require 'ace-jump-mode)
-  (define-key global-map (kbd "C-c C-SPC") 'ace-jump-mode))
+  (define-key global-map (kbd "C-j") 'ace-jump-mode))
 
 (defun enable-multiple-cursors ()
+  "Enable multiple cursors plugin globally and setup some keybindings for it."
   (require 'multiple-cursors)
 
-  (global-set-key (kbd "C-c C-") 'mc/edit-lines)
+  (global-set-key (kbd "C-c C-l") 'mc/edit-lines)
   (global-set-key (kbd "C-c C-n") 'mc/mark-next-like-this)
   (global-set-key (kbd "C-c C-p") 'mc/mark-previous-like-this)
+  (global-set-key (kbd "C-c C-j") 'mc/mark-all-dwim)
+  (global-set-key (kbd "C-c C-k") 'mc/mark-all-like-this-dwim)
   (global-set-key (kbd "C-c C-a") 'mc/mark-all-like-this)
 
-  (multiple-cursors-mode 1))
+  (define-globalized-minor-mode global-multiple-cursors-mode multiple-cursors-mode
+    (lambda ()
+      (multiple-cursors-mode 1)))
+
+  (global-multiple-cursors-mode 1))
 
 (defun enable-expand-region ()
+  "Enable expand region plugin and bind keys to it."
   (require 'expand-region)
-  (global-set-key (kbd "C-") 'er/expand-region)
+  (global-set-key (kbd "C-c C-u") 'er/expand-region)
   )
 
 (defun enable-undo-tree ()
   "Setup the undo tree package."
   (require 'undo-tree)
 
-  (defadvice undo-tree-visualize (around undo-tree-split-side-by-side activate)
-    "Split undo-tree side-by-side"
-    (let ((split-height-threshold nil)
-          (split-width-threshold 0))
-      ad-do-it))
-
+  (setq undo-tree-history-dir (let ((dir (concat user-emacs-directory
+                                                 "undo-tree-history/")))
+                                (make-directory dir :parents)
+                                dir))
+  (setq undo-tree-history-directory-alist `(("." . ,undo-tree-history-dir)))
   (setq-default undo-tree-auto-save-history t)
 
   (defun undo-tree-visualizer-update-linum (&rest args)
@@ -423,7 +431,8 @@
              (helm-mode nil helm)
              (irony-mode " Fe" irony)
              (projectile-mode " Proj" projectile)
-             (auto-fill-mode "AF" nil))))
+             (auto-fill-mode " AF" nil)
+             (undo-tree-mode nil undo-tree))))
 
 (defun enable-irony ()
   "Setup c-mode functionality."
@@ -442,6 +451,7 @@
   (yas-global-mode 1))
 
 ;; CALL THE ABOVE DEFINED FUNCTIONS TO SETUP EMACS
+(enable-elscreen)
 (enable-delight)
 (enable-undo-tree)
 (enable-smart-mode-line)
@@ -454,9 +464,11 @@
 (enable-yasnippet)
 (enable-ace-jump-mode)
 (enable-multiple-cursors)
+(enable-expand-region)
+
 (define-key global-map (kbd "C-c C-f") 'find-grep)
 
-;;(require 'session)
+(require 'session)
 (add-hook 'after-init-hook 'session-initialize)
 (add-to-list 'load-path "~/.emacs.d/elpa/session-20120510.1700")
 
