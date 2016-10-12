@@ -27,8 +27,10 @@
                            ;; recentering
  mouse-wheel-scroll-amount '(1) ;; mouse scroll moves 1 line at a time, instead
                                 ;; of 5 lines
- mouse-wheel-progressive-speed nil) ;; on a long mouse scroll keep scrolling by
-                                    ;; 1 line
+ mouse-wheel-progressive-speed nil ;; on a long mouse scroll keep scrolling by 1
+                                   ;; line
+ )
+
 (define-key global-map (kbd "RET")
     'newline-and-indent) ;; Automatically indent on RET key pressed
                          ;; NOTE: This is normally bound to C-j
@@ -145,8 +147,11 @@
 
 (defun enable-elscreen ()
   "Enable elscreen."
-  (elscreen-start) ;; enable emacs screens
-  (elscreen-set-prefix-key "\C-\M-z"))
+  (if (eq window-system nil)
+      '()
+    (lambda ()
+        (elscreen-start) ;; enable emacs screens
+        (elscreen-set-prefix-key "\C-\M-z"))))
 
 (defun enable-ace-jump-mode ()
   "Enable ace jump mode."
