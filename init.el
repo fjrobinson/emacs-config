@@ -43,26 +43,27 @@
 
 ;; Answering just 'y' or 'n' will do
 (defalias 'yes-or-no-p 'y-or-n-p)
-(setq split-width-threshold 0)    ;; Make screen splits prefer side by side over
-(setq split-height-threshold nil) ;; top bottom
+;; (setq split-width-threshold 0)    ;; Make screen splits prefer side by side over
+;; (setq split-height-threshold nil) ;; top bottom
 
 ;; Auto refresh buffers
 (global-auto-revert-mode 1)
 
 ;; Also auto refresh dired, but be quiet about it
-(setq global-auto-revert-non-file-buffers t)
-(setq auto-revert-verbose nil)
+(setq-default global-auto-revert-non-file-buffers t)
+(setq-default auto-revert-verbose nil)
 
 ;; UTF-8 please
-(setq locale-coding-system 'utf-8)
+(setq-default locale-coding-system 'utf-8)
 (set-terminal-coding-system 'utf-8)
 (set-keyboard-coding-system 'utf-8)
 (set-selection-coding-system 'utf-8)
 (prefer-coding-system 'utf-8)
 
 (savehist-mode 1) ;; Remember commands
-(setq savehist-additional-variables '(kill-ring search-ring regexp-search-ring))
-(setq savehist-file "~/.emacs.d/.hist")
+(setq-default savehist-additional-variables
+              '(kill-ring search-ring regexp-search-ring))
+(setq-default savehist-file "~/.emacs.d/.hist")
 
 ;;
 ;; PACKAGES
@@ -80,6 +81,9 @@
                '("gnu" . "http://elpa.gnu.org/packages/")))
 
 (package-initialize)
+
+(unless (file-exists-p "~/.emacs.d/elpa/archives/melpa")
+  (package-refresh-contents))
 
 ;; Install primary plugins (if not already)
 (package-install 'async)
@@ -99,15 +103,10 @@
 (package-install 'ace-jump-mode)
 (package-install 'multiple-cursors)
 (package-install 'expand-region)
-
-(package-install 'irony)
-(package-install 'irony-eldoc)
 (package-install 'company)
 (package-install 'company-flx)
-(package-install 'company-irony)
 (package-install 'company-quickhelp)
 (package-install 'flycheck)
-(package-install 'flycheck-irony)
 (package-install 'projectile)
 (package-install 'helm)
 (package-install 'helm-core)
@@ -117,12 +116,28 @@
 (package-install 'helm-gtags)
 (package-install 'helm-projectile)
 (package-install 'helm-google)
+
+;; C/C++ packages
+(package-install 'irony)
+(package-install 'irony-eldoc)
+(package-install 'company-irony)
+(package-install 'flycheck-irony)
+
+;; LaTeX packages
 (package-install 'latex-preview-pane)
 (package-install 'auctex)
 (package-install 'company-auctex)
 
+;; Rust packages
+(package-install 'rust-mode)
+(package-install 'cargo)
+(package-install 'flycheck-rust)
+(package-install 'racer)
+(package-install 'company-racer)
+
 ;; Load external custom file
-(setq-default custom-file (expand-file-name ".custom.el" user-emacs-directory))
+(setq-default custom-file
+              (expand-file-name ".custom.el" user-emacs-directory))
 (when (file-exists-p custom-file)
   (load custom-file))
 
@@ -134,7 +149,6 @@
 
 ;; Setup the theme
 (global-hl-line-mode)
-(add-to-list 'custom-theme-load-path "~/.emacs.d/themes/")
 (load-theme 'zenburn 1)
 (set-face-background 'hl-line "#4f4f4f") ;; Change zenburn hl-line face
 (set-face-background 'vertical-border "color-234")
@@ -142,7 +156,7 @@
 
 ;; save place in files
 (require 'saveplace)
-(setq save-place-file "~/.emacs.d/saved-places")
+(setq save-place-file (expand-file-name "saved-places" user-emacs-directory))
 (setq-default save-place t)
 
 (defun enable-elscreen ()
@@ -427,8 +441,23 @@
   "Setup Company for use."
   (require 'company)
 
+  (defvar company-idle-delay)
+  (defvar company-minimum-prefix-length)
+  (defvar company-active-map)
+  (defvar company-tooltip-align-annotations)
+
   (with-eval-after-load 'company (company-flx-mode +1))
-  (with-eval-after-load 'irony '(add-to-list 'company-backends '(company-irony company-irony-c-headers company-yasnippet)))
+  (with-eval-after-load 'irony
+    '(add-to-list 'company-backends
+                  '(company-irony
+                    company-irony-c-headers
+                    company-yasnippet
+                    company-racer)))
+
+  (setq-default company-idle-delay 0.1
+                company-minimum-prefix-length 1
+                company-tooltip-align-annotations t
+                company-tooltip-limit 5)
 
   (company-quickhelp-mode 1)
   ;;(setq company-quickhelp-idle-delay 0.5)
@@ -454,15 +483,32 @@
              (undo-tree-mode nil undo-tree))))
 
 (defun enable-irony ()
-  "Setup c-mode functionality."
-  (defvar company-backends)
+  "Setup 'c-mode' functionality."
   (require 'irony)
+
+  (defvar company-backends)
+
   ;;(add-hook 'irony-mode-hook 'irony-eldoc)
   (irony-mode 1)
   (irony-eldoc 1)
   (irony-cdb-autosetup-compile-options)
   (eval-after-load 'flycheck (flycheck-irony-setup)))
-  ;;(eval-after-load 'company '(add-to-list 'company-backends '('company-irony 'company-irony-c-headers))))
+  ;;(eval-after-load 'company '(add-to-list 'company-backends '('company-irony
+;;'company-irony-c-headers))))
+
+(defun enable-racer ()
+  "Setup racer functionality.
+Racer is a completion framework for 'rust-mode'."
+  (defvar rust-mode-map)
+  (setq exec-path (append exec-path '("~/.cargo/bin/cargo")))
+  (add-hook 'racer-mode-hook #'eldoc-mode)
+
+  (setq-default racer-rust-src-path (getenv "RUST_SRC_PATH"))
+
+  (racer-mode t)
+  ;; (define-key rust-mode-map (kbd "TAB")
+  ;;   #'company-indent-or-complete-common)
+  )
 
 (defun enable-yasnippet ()
   ;; yasnippet
@@ -528,6 +574,16 @@
             (enable-irony)
             ;; add more commands here
             ))
+
+;; Rust specific functionality rust-mode-hook
+(add-hook 'rust-mode-hook
+          (lambda ()
+            (cargo-minor-mode t)
+            (enable-racer)
+            (add-hook 'flycheck-mode-hook #'flycheck-rust-setup)
+            ;; add more commands here
+            ))
+
 ;;(enable-flyspell)
 (enable-projectile)
 (enable-flycheck)
